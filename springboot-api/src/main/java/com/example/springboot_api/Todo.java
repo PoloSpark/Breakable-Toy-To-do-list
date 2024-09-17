@@ -33,6 +33,15 @@ public class Todo {
 
     private LocalDate creationDate = LocalDate.now();
 
+    private boolean isDel = false;
+
+    public boolean isDel() {
+        return isDel;
+    }
+
+    public void setDel(boolean del) {
+        isDel = del;
+    }
 
     public enum Priority {
         HIGH, MEDIUM, LOW

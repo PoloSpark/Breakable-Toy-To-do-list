@@ -17,6 +17,7 @@ public class TodoService {
 
     public List<Todo> listTodos(int page, int size, boolean done, String name, Todo.Priority priority) {
         return todos.stream()
+                .filter(todo -> !todo.isDel())
                 .filter(todo -> (name == null || todo.getText().toLowerCase().contains(name.toLowerCase())))
                 .filter(todo -> (priority == null || todo.getPriority() == priority))
                 .filter(todo -> todo.isDone() == done)
@@ -75,6 +76,17 @@ public class TodoService {
                         todo.setDone(false);
                         todo.setDoneDate(null);
                     }
+                    return todo;
+                });
+    }
+
+    public Optional<Todo> deleteTodo(String id){
+
+        return todos.stream()
+                .filter(todo -> todo.getId().equals(id))
+                .findFirst()
+                .map(todo -> {
+                    todo.setDel(true);
                     return todo;
                 });
     }

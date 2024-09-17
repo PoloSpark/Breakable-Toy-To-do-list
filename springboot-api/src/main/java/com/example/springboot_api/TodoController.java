@@ -43,5 +43,10 @@ public class TodoController {
     public Optional<Todo> markTodoAsUndone(@PathVariable String id) {
         return todoService.markAsUndone(id);
     }
+
+    @PutMapping("/{id}/delete")
+    public Optional<Todo> delTodo(@PathVariable String id) {
+        return todoService.deleteTodo(id);
+    }
 }
 
