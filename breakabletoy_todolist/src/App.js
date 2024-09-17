@@ -62,7 +62,7 @@ function App() {
   };
 
   const handleSubmit = () => {
-    axios.post('http://localhost:8080/todos', {
+    axios.post('http://localhost:9090/todos', {
       text: activityName,
       dueDate: dueDate,
       priority: priority,
@@ -78,7 +78,7 @@ function App() {
 
   const toggleDone = (id, currentStatus) => {
     if (currentStatus === true) {
-      axios.put(`http://localhost:8080/todos/${id}/undone`, { done: !currentStatus })
+      axios.put(`http://localhost:9090/todos/${id}/undone`, { done: !currentStatus })
         .then(() => {
           setTodos(prevTodos =>
             prevTodos.map(todo =>
@@ -88,7 +88,7 @@ function App() {
         })
         .catch((error) => console.error('Error updating status:', error));
     }
-    axios.post(`http://localhost:8080/todos/${id}/done`, { done: !currentStatus })
+    axios.post(`http://localhost:9090/todos/${id}/done`, { done: !currentStatus })
       .then(() => {
         setTodos(prevTodos =>
           prevTodos.map(todo =>
@@ -109,7 +109,7 @@ function App() {
       cancelButtonText: 'No, cancel!',
     }).then((result) => {
       if (result.isConfirmed) {
-        axios.put(`http://localhost:8080/todos/${id}/delete`)
+        axios.put(`http://localhost:9090/todos/${id}/delete`)
           .catch((error) => console.error('Error deleting todo:', error));
       }
       setRenderer(true);
@@ -167,7 +167,7 @@ function App() {
   };
 
   const handleSubmitEdit = () => {
-    axios.put(`http://localhost:8080/todos/${editId}`, {
+    axios.put(`http://localhost:9090/todos/${editId}`, {
       text: activityName,
       dueDate: dueDate,
       priority: priority,
@@ -182,7 +182,7 @@ function App() {
   }
 
   useEffect(() => {
-    axios.get('http://localhost:8080/todos?size=100')
+    axios.get('http://localhost:9090/todos?size=100')
       .then((response) => {
         setTodos(response.data);
       })
@@ -192,7 +192,7 @@ function App() {
   }, []);
   
   useEffect(() => {
-    axios.get(`http://localhost:8080/todos?size=100`)
+    axios.get(`http://localhost:9090/todos?size=100`)
       .then((response) => {
         setTodos(response.data);
       })
