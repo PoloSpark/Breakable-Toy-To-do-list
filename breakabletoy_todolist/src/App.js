@@ -12,7 +12,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { FormControl, InputLabel, Select, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, TableSortLabel } from '@mui/material';
+import { FormControl, InputLabel, Select, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, TableSortLabel, TablePagination, IconButton } from '@mui/material';
+import { FirstPage, LastPage, KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
 import { Edit, Delete } from '@mui/icons-material';
 
 const priorityValues = {
@@ -31,7 +32,10 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [renderer, setRenderer] = useState(false);
   const [order, setOrder] = useState('asc');
-  const [orderBy, setOrderBy] = useState('Name')
+  const [orderBy, setOrderBy] = useState('Name');
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 10;
+  const paginatedData = todos.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -51,10 +55,6 @@ function App() {
     });
     setOpen(false);
     setRenderer(true)
-  };
-
-  const handleSearch = () => {
-    console.log(name, priority, status);
   };
 
   const toggleDone = (id, currentStatus) => {
@@ -93,6 +93,7 @@ function App() {
         axios.put(`http://localhost:8080/todos/${id}/delete`)
           .catch((error) => console.error('Error deleting todo:', error));
       }
+      setRenderer(true);
     });
   };
 
@@ -118,9 +119,40 @@ function App() {
     setTodos(sortedTodos);
   };
 
-  
+  const filterTodos = (todos, nameFilter, priorityFilter, doneFilter) => {
+    return todos.filter(todo => {
+      const nameMatch = nameFilter
+        ? todo.text === nameFilter
+        : true;
+
+      const priorityLevels = { 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3 };
+      const priorityMatch = priorityFilter
+        ? priorityLevels[todo.priority] === priorityLevels[priorityFilter]
+        : true;
+
+      const doneMatch = doneFilter !== undefined
+        ? todo.done === doneFilter
+        : true;
+
+      return nameMatch && priorityMatch && doneMatch;
+    });
+  };
+
+  const handleSearch = () => {
+    const filteredTodos = filterTodos(todos, name, priority, status);
+    setTodos(filteredTodos);
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
   useEffect(() => {
-    axios.get('http://localhost:8080/todos')
+    console.log(todos.length);
+  });
+
+  useEffect(() => {
+    axios.get('http://localhost:8080/todos?size=100')
       .then((response) => {
         setTodos(response.data);
       })
@@ -130,14 +162,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    axios.get('http://localhost:8080/todos')
+    axios.get(`http://localhost:8080/todos?size=100`)
       .then((response) => {
         setTodos(response.data);
       })
       .catch((error) => {
         console.error('Error fetching data:', error);
       });
-      setRenderer(false)
+    setRenderer(false)
   }, [renderer]);
 
   return (
@@ -160,9 +192,9 @@ function App() {
                 label="Prioridad"
               >
                 <MenuItem value=""><em>Ninguno</em></MenuItem>
-                <MenuItem value="LOW">Low</MenuItem>
-                <MenuItem value="MEDIUM">Medium</MenuItem>
-                <MenuItem value="HIGH">High</MenuItem>
+                <MenuItem value="LOW">LOW</MenuItem>
+                <MenuItem value="MEDIUM">MEDIUM</MenuItem>
+                <MenuItem value="HIGH">HIGH</MenuItem>
               </Select>
             </FormControl>
 
@@ -170,12 +202,12 @@ function App() {
               <InputLabel>Estado</InputLabel>
               <Select
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => setStatus(e.target.value === '' ? undefined : e.target.value === 'true')}
                 label="Estado"
               >
                 <MenuItem value=""><em>Todos</em></MenuItem>
-                <MenuItem value="done">Done</MenuItem>
-                <MenuItem value="undone">Undone</MenuItem>
+                <MenuItem value="true">Done</MenuItem>
+                <MenuItem value="false">Undone</MenuItem>
               </Select>
             </FormControl>
 
@@ -197,12 +229,12 @@ function App() {
                   <TableCell>Done</TableCell>
                   <TableCell>Name</TableCell>
                   <TableCell><TableSortLabel active={orderBy === 'priority'} direction={orderBy === priority ? order : 'asc'} onClick={() => handleSortRequest('priority')}>Priority</TableSortLabel></TableCell>
-                  <TableCell><TableSortLabel active={orderBy === 'dueDate'} direction={orderBy === dueDate ? order: 'asc'} onClick={() => handleSortRequest('dueDate')}>Due Date</TableSortLabel></TableCell>
+                  <TableCell><TableSortLabel active={orderBy === 'dueDate'} direction={orderBy === dueDate ? order : 'asc'} onClick={() => handleSortRequest('dueDate')}>Due Date</TableSortLabel></TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {todos.map((todo) => (
+                {paginatedData.map((todo) => (
                   <TableRow key={todo.id}>
                     <TableCell>
                       <Checkbox
@@ -224,8 +256,9 @@ function App() {
                       </Button>
                       <Button
                         variant="outlined"
-                        color="secondary"
+                        color="error"
                         startIcon={<Delete />}
+                        sx={{ marginLeft: 2 }}
                         onClick={() => handleDelete(todo.id)}
                       >
                         Delete
@@ -236,6 +269,14 @@ function App() {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[]}
+            component="div"
+            count={todos.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+          />
         </div>
       </div>
 
