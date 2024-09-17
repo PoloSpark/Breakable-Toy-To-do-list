@@ -13,8 +13,8 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { FormControl, InputLabel, Select, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, TableSortLabel, TablePagination, IconButton } from '@mui/material';
-import { FirstPage, LastPage, KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
 import { Edit, Delete } from '@mui/icons-material';
+import dayjs from 'dayjs';
 
 const priorityValues = {
   HIGH: 3,
@@ -24,9 +24,12 @@ const priorityValues = {
 
 function App() {
   const [open, setOpen] = useState(false);
+  const [edit, setEdit] = useState(false);
+
   const [activityName, setActivityName] = useState('');
   const [priority, setPriority] = useState('');
   const [dueDate, setDueDate] = useState(null);
+
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
   const [todos, setTodos] = useState([]);
@@ -36,6 +39,19 @@ function App() {
   const [page, setPage] = useState(0);
   const rowsPerPage = 10;
   const paginatedData = todos.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const [editId, setEditId] = useState("");
+
+  const handleEditOpen = (id, text, priority, dueDate) => {
+    setActivityName(text);
+    setPriority(priority);
+    setDueDate(dayjs(dueDate));
+    setEditId(id)
+    setEdit(true);
+  }
+
+  const handleEditClose = () => {
+    setEdit(false);
+  }
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -53,6 +69,9 @@ function App() {
     }).catch(function (error) {
       console.log(error);
     });
+    setActivityName("");
+    setPriority("");
+    setDueDate(null);
     setOpen(false);
     setRenderer(true)
   };
@@ -143,13 +162,24 @@ function App() {
     setTodos(filteredTodos);
   };
 
-  const handleChangePage = (event, newPage) => {
+  const handleChangePage = (newPage) => {
     setPage(newPage);
   };
 
-  useEffect(() => {
-    console.log(todos.length);
-  });
+  const handleSubmitEdit = () => {
+    axios.put(`http://localhost:8080/todos/${editId}`, {
+      text: activityName,
+      dueDate: dueDate,
+      priority: priority,
+    }).catch(function (error) {
+      console.log(error);
+    });
+    setActivityName("");
+    setPriority("");
+    setDueDate(null);
+    setEdit(false);
+    setRenderer(true)
+  }
 
   useEffect(() => {
     axios.get('http://localhost:8080/todos?size=100')
@@ -160,7 +190,7 @@ function App() {
         console.error('Error fetching data:', error);
       });
   }, []);
-
+  
   useEffect(() => {
     axios.get(`http://localhost:8080/todos?size=100`)
       .then((response) => {
@@ -171,6 +201,7 @@ function App() {
       });
     setRenderer(false)
   }, [renderer]);
+  
 
   return (
     <div className='App-header'>
@@ -250,7 +281,7 @@ function App() {
                         variant="outlined"
                         color="primary"
                         startIcon={<Edit />}
-                        onClick={() => { }}
+                        onClick={() => handleEditOpen(todo.id, todo.text, todo.priority, todo.dueDate)}
                       >
                         Edit
                       </Button>
@@ -321,6 +352,52 @@ function App() {
             Save
           </Button>
           <Button onClick={handleClose} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={edit} onClose={handleEditClose}>
+        <DialogTitle>{"Edit a To-Do"}</DialogTitle>
+        <DialogContent>
+          <form>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Activity Name"
+              fullWidth
+              value={activityName}
+              onChange={(e) => setActivityName(e.target.value)}
+              required
+            />
+            <TextField
+              select
+              margin="dense"
+              label="Priority"
+              fullWidth
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              required
+            >
+              <MenuItem value="LOW">LOW</MenuItem>
+              <MenuItem value="MEDIUM">MEDIUM</MenuItem>
+              <MenuItem value="HIGH">HIGH</MenuItem>
+            </TextField>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                label="Due Date"
+                value={dueDate}
+                onChange={(newValue) => setDueDate(newValue)}
+                renderInput={(params) => <TextField {...params} fullWidth margin="dense" />}
+              />
+            </LocalizationProvider>
+          </form>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSubmitEdit} color="primary">
+            Save
+          </Button>
+          <Button onClick={handleEditClose} color="primary">
             Close
           </Button>
         </DialogActions>
