@@ -12,8 +12,14 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { FormControl, InputLabel, Select, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox } from '@mui/material';
+import { FormControl, InputLabel, Select, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, TableSortLabel } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
+
+const priorityValues = {
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1
+};
 
 function App() {
   const [open, setOpen] = useState(false);
@@ -23,6 +29,9 @@ function App() {
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
   const [todos, setTodos] = useState([]);
+  const [renderer, setRenderer] = useState(false);
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('Name')
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -41,25 +50,25 @@ function App() {
       console.log(error);
     });
     setOpen(false);
+    setRenderer(true)
   };
-
 
   const handleSearch = () => {
     console.log(name, priority, status);
   };
 
-  useEffect(() => {
-    axios.get('http://localhost:8080/todos')
-      .then((response) => {
-        setTodos(response.data);
-      })
-      .catch((error) => {
-        console.error('Error fetching data:', error);
-      });
-  }, []);
-
   const toggleDone = (id, currentStatus) => {
-
+    if (currentStatus === true) {
+      axios.put(`http://localhost:8080/todos/${id}/undone`, { done: !currentStatus })
+        .then(() => {
+          setTodos(prevTodos =>
+            prevTodos.map(todo =>
+              todo.id === id ? { ...todo, done: !currentStatus } : todo
+            )
+          );
+        })
+        .catch((error) => console.error('Error updating status:', error));
+    }
     axios.post(`http://localhost:8080/todos/${id}/done`, { done: !currentStatus })
       .then(() => {
         setTodos(prevTodos =>
@@ -86,6 +95,50 @@ function App() {
       }
     });
   };
+
+  const handleSortRequest = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+
+    const sortedTodos = [...todos].sort((a, b) => {
+      let comparison = 0;
+
+      if (property === 'priority') {
+        comparison = priorityValues[b[property]] - priorityValues[a[property]];
+      } else if (property === 'dueDate') {
+        comparison = a[property].localeCompare(b[property]);
+      } else {
+        comparison = (a[property] < b[property]) ? -1 : 1;
+      }
+
+      return isAsc ? comparison : -comparison;
+    });
+
+    setTodos(sortedTodos);
+  };
+
+  
+  useEffect(() => {
+    axios.get('http://localhost:8080/todos')
+      .then((response) => {
+        setTodos(response.data);
+      })
+      .catch((error) => {
+        console.error('Error fetching data:', error);
+      });
+  }, []);
+
+  useEffect(() => {
+    axios.get('http://localhost:8080/todos')
+      .then((response) => {
+        setTodos(response.data);
+      })
+      .catch((error) => {
+        console.error('Error fetching data:', error);
+      });
+      setRenderer(false)
+  }, [renderer]);
 
   return (
     <div className='App-header'>
@@ -136,15 +189,15 @@ function App() {
             + New To Do
           </Button>
         </div>
-        <div className='grid-item'>
+        <div className='grid-table'>
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
                   <TableCell>Done</TableCell>
                   <TableCell>Name</TableCell>
-                  <TableCell>Priority</TableCell>
-                  <TableCell>Due Date</TableCell>
+                  <TableCell><TableSortLabel active={orderBy === 'priority'} direction={orderBy === priority ? order : 'asc'} onClick={() => handleSortRequest('priority')}>Priority</TableSortLabel></TableCell>
+                  <TableCell><TableSortLabel active={orderBy === 'dueDate'} direction={orderBy === dueDate ? order: 'asc'} onClick={() => handleSortRequest('dueDate')}>Due Date</TableSortLabel></TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -165,7 +218,7 @@ function App() {
                         variant="outlined"
                         color="primary"
                         startIcon={<Edit />}
-                        onClick={() => {}}
+                        onClick={() => { }}
                       >
                         Edit
                       </Button>

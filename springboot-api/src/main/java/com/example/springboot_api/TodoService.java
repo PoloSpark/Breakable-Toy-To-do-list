@@ -20,7 +20,6 @@ public class TodoService {
                 .filter(todo -> !todo.isDel())
                 .filter(todo -> (name == null || todo.getText().toLowerCase().contains(name.toLowerCase())))
                 .filter(todo -> (priority == null || todo.getPriority() == priority))
-                .filter(todo -> todo.isDone() == done)
                 .sorted((t1, t2) -> {
                     int priorityComparison = t1.getPriority().compareTo(t2.getPriority());
                     return priorityComparison != 0 ? priorityComparison : t1.getDueDate() != null && t2.getDueDate() != null
