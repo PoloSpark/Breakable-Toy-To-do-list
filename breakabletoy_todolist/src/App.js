@@ -1,5 +1,5 @@
 import './App.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 import { FormControl, InputLabel, Select, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, TableSortLabel, TablePagination, IconButton } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 import dayjs from 'dayjs';
+import { useStore } from './store';
 
 const priorityValues = {
   HIGH: 3,
@@ -22,14 +23,36 @@ const priorityValues = {
   LOW: 1
 };
 
+const initalState = {
+  activityName: '',
+  priority: '',
+  dueDate: null,
+}
+
+const newTaskReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_ACTIVITY_NAME':
+      return { ...state, activityName: action.payload };
+    case 'SET_PRIORITY':
+      return { ...state, priority: action.payload };
+    case 'SET_DUE_DATE':
+      return { ...state, dueDate: action.payload };
+    case 'RESET':
+      return initalState;
+    default:
+      return state;
+  }
+};
+
 function App() {
-  const [open, setOpen] = useState(false);
-  const [edit, setEdit] = useState(false);
+  // utilizan zustand para compartir el estado global
+  const { open, edit, setOpen, setEdit } = useStore();
 
-  const [activityName, setActivityName] = useState('');
-  const [priority, setPriority] = useState('');
-  const [dueDate, setDueDate] = useState(null);
+  // utilizan useReducer para manejar el estado de la nueva tarea
+  const [newTaskState, dispatch] = useReducer(newTaskReducer, initalState);
+  const { activityName, priority, dueDate } = newTaskState;
 
+  // utilizan useState para manejar el estado de la lista de tareas
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
   const [todos, setTodos] = useState([]);
@@ -41,10 +64,12 @@ function App() {
   const paginatedData = todos.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   const [editId, setEditId] = useState("");
 
+  console.log({page});
+
   const handleEditOpen = (id, text, priority, dueDate) => {
-    setActivityName(text);
-    setPriority(priority);
-    setDueDate(dayjs(dueDate));
+    // setActivityName(text);
+    // setPriority(priority);
+    // setDueDate(dayjs(dueDate));
     setEditId(id)
     setEdit(true);
   }
@@ -62,6 +87,7 @@ function App() {
   };
 
   const handleSubmit = () => {
+    console.log(newTaskState);
     axios.post('http://localhost:9090/todos', {
       text: activityName,
       dueDate: dueDate,
@@ -69,9 +95,7 @@ function App() {
     }).catch(function (error) {
       console.log(error);
     });
-    setActivityName("");
-    setPriority("");
-    setDueDate(null);
+    dispatch({ type: 'RESET' });
     setOpen(false);
     setRenderer(true)
   };
@@ -162,24 +186,25 @@ function App() {
     setTodos(filteredTodos);
   };
 
-  const handleChangePage = (newPage) => {
+  const handleChangePage = (event, newPage) => {
+    console.log(event, newPage);
     setPage(newPage);
   };
 
-  const handleSubmitEdit = () => {
-    axios.put(`http://localhost:9090/todos/${editId}`, {
-      text: activityName,
-      dueDate: dueDate,
-      priority: priority,
-    }).catch(function (error) {
-      console.log(error);
-    });
-    setActivityName("");
-    setPriority("");
-    setDueDate(null);
-    setEdit(false);
-    setRenderer(true)
-  }
+  // const handleSubmitEdit = () => {
+  //   axios.put(`http://localhost:9090/todos/${editId}`, {
+  //     text: activityName,
+  //     dueDate: dueDate,
+  //     priority: priority,
+  //   }).catch(function (error) {
+  //     console.log(error);
+  //   });
+  //   setActivityName("");
+  //   setPriority("");
+  //   setDueDate(null);
+  //   setEdit(false);
+  //   setRenderer(true)
+  // }
 
   useEffect(() => {
     axios.get('http://localhost:9090/todos?size=100')
@@ -209,7 +234,7 @@ function App() {
         <div className='grid-filter'>
           <Box display="flex" gap={2} alignItems="center">
             <TextField
-              label="Nombre"
+              label="Name"
               variant="outlined"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -219,8 +244,8 @@ function App() {
               <InputLabel>Prioridad</InputLabel>
               <Select
                 value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                label="Prioridad"
+                onChange={(e) => {}}
+                label="Priority"
               >
                 <MenuItem value=""><em>Ninguno</em></MenuItem>
                 <MenuItem value="LOW">LOW</MenuItem>
@@ -234,7 +259,7 @@ function App() {
               <Select
                 value={status}
                 onChange={(e) => setStatus(e.target.value === '' ? undefined : e.target.value === 'true')}
-                label="Estado"
+                label="Status"
               >
                 <MenuItem value=""><em>Todos</em></MenuItem>
                 <MenuItem value="true">Done</MenuItem>
@@ -243,7 +268,7 @@ function App() {
             </FormControl>
 
             <Button variant="contained" color="primary" onClick={handleSearch}>
-              Search
+              Buscar
             </Button>
           </Box>
         </div>
@@ -318,10 +343,12 @@ function App() {
             <TextField
               autoFocus
               margin="dense"
-              label="Activity Name"
+              label="Task Name"
               fullWidth
               value={activityName}
-              onChange={(e) => setActivityName(e.target.value)}
+              onChange={(e) => {
+                dispatch({ type: 'SET_ACTIVITY_NAME', payload: e.target.value });
+              }}
               required
             />
             <TextField
@@ -330,7 +357,9 @@ function App() {
               label="Priority"
               fullWidth
               value={priority}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={(e) => {
+                dispatch({ type: 'SET_PRIORITY', payload: e.target.value });
+              }}
               required
             >
               <MenuItem value="LOW">LOW</MenuItem>
@@ -341,7 +370,9 @@ function App() {
               <DatePicker
                 label="Due Date"
                 value={dueDate}
-                onChange={(newValue) => setDueDate(newValue)}
+                onChange={(newValue) => {
+                  dispatch({ type: 'SET_DUE_DATE', payload: newValue });
+                }}
                 renderInput={(params) => <TextField {...params} fullWidth margin="dense" />}
               />
             </LocalizationProvider>
@@ -357,7 +388,7 @@ function App() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={edit} onClose={handleEditClose}>
+      {/* <Dialog open={edit} onClose={handleEditClose}>
         <DialogTitle>{"Edit a To-Do"}</DialogTitle>
         <DialogContent>
           <form>
@@ -401,7 +432,7 @@ function App() {
             Close
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
     </div>
   );
 }
