@@ -72,7 +72,7 @@ const TodoList = () => {
   };
 
   return (
-    <div className="App-header">
+    <div>
       <HeaderFilters filters={filters} onFilterChange={handleFilter} />
       <Box marginTop={2}>
         <Button variant="contained" onClick={() => setOpenDialog(true)}>
