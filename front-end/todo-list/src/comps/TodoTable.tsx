@@ -8,7 +8,7 @@ import {
   Checkbox,
   Button,
 } from '@mui/material';
-import { ITodo } from './TodoList';
+import { ITodo } from './TodoListApp';
 
 interface IProps {
   todos: ITodo[];

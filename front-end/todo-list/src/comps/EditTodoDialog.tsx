@@ -1,28 +1,27 @@
 import { Dialog, DialogTitle, DialogContent } from '@mui/material';
 import axios from 'axios';
 import TodoForm from './TodoForm';
-import { ITodo } from './TodoList';
-
-const API_URL = 'http://localhost:9090/todos';
+import { API_URL, Task } from './TodoListApp';
 
 interface IProps {
-  todo: ITodo;
-  onClose: (todo: ITodo | null) => void;
-  onRefresh: (todo: ITodo | null) => void;
+  todo: Task;
+  onClose: () => void;
+  onRefresh: () => void;
 }
 
 const EditTodoDialog = ({ todo, onClose, onRefresh }: IProps) => {
-  const handleSubmit = (data: ITodo) => {
+  const handleSubmit = (data: Task) => {
     // PUT request to update the existing todo
+    //console.log('data', data);
     axios
       .put(`${API_URL}/${todo.id}`, {
         text: data.text,
         priority: data.priority,
-        dueDate: data.dueDate || null,
+        dueDate: data.dueDate,
       })
       .then(() => {
-        onRefresh(todo); // Refresh the todo list
-        onClose(todo); // Close the dialog
+        onRefresh(); // Refresh the todo list
+        onClose(); // Close the dialog
       })
       .catch((error) => {
         console.error('Failed to update todo', error);
@@ -30,10 +29,10 @@ const EditTodoDialog = ({ todo, onClose, onRefresh }: IProps) => {
   };
 
   return (
-    <Dialog open={true} onClose={() => onClose(todo)} fullWidth maxWidth="sm">
+    <Dialog open={true} onClose={() => onClose()} fullWidth maxWidth="sm">
       <DialogTitle>Edit To-Do</DialogTitle>
       <DialogContent>
-        <TodoForm todo={todo} onSubmit={() => handleSubmit(todo)} onClose={() => onClose(todo)} />
+        <TodoForm todo={todo} onSubmit={handleSubmit} onClose={() => onClose()} />
       </DialogContent>
     </Dialog>
   );

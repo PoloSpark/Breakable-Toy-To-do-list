@@ -1,8 +1,7 @@
 import { Dialog, DialogTitle, DialogContent } from '@mui/material';
 import axios from 'axios';
 import TodoForm from './TodoForm';
-
-const API_URL = 'http://localhost:9090/todos';
+import { API_URL } from './TodoListApp';
 
 const NewTodoDialog = ({ onClose, onRefresh }: { onClose: any, onRefresh: any }) => {
 

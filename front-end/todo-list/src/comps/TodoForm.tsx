@@ -1,37 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { TextField, Select, MenuItem, FormControl, InputLabel, Button, Box } from '@mui/material';
-
-interface Todo {
-  id?: number;
-  text: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  dueDate?: string;
-}
+import React, { useState } from 'react';
+import { TextField, Select, MenuItem, FormControl, InputLabel, Button, Box, SelectChangeEvent } from '@mui/material';
+import { Task } from './TodoListApp';
 
 interface TodoFormProps {
-  todo?: Todo;
-  onSubmit: (data: Todo) => void;
+  todo?: Task;
+  onSubmit: (data: Task) => void;
   onClose: () => void;
 }
 
-const TodoForm: React.FC<TodoFormProps> = ({ todo = {} as Todo, onSubmit, onClose }) => {
-  const [formValues, setFormValues] = useState<Todo>({
+const TodoForm: React.FC<TodoFormProps> = ({ todo = {} as Task, onSubmit, onClose }) => {
+  const [formValues, setFormValues] = useState<Task>({
+    id: todo.id || '',
     text: todo.text || '',
     priority: todo.priority || 'LOW',
+    done: todo.done || false,
     dueDate: todo.dueDate || '',
+    createdAt: todo.createdAt || '',
   });
 
-  useEffect(() => {
-    if (todo) {
-      setFormValues({
-        text: todo.text || '',
-        priority: todo.priority || 'LOW',
-        dueDate: todo.dueDate || '',
-      });
-    }
-  }, [todo]);
-
-  const handleChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  const handleChange = (e: React.ChangeEvent<{ name?: string; value: unknown }> | SelectChangeEvent<string>) => {
     const { name, value } = e.target;
     setFormValues({ ...formValues, [name!]: value });
   };
@@ -55,7 +42,8 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo = {} as Todo, onSubmit, onClos
         <Select
           name="priority"
           value={formValues.priority}
-          onChange={() => handleChange}
+          onChange={handleChange}
+          required
         >
           <MenuItem value="LOW">LOW</MenuItem>
           <MenuItem value="MEDIUM">MEDIUM</MenuItem>
@@ -69,6 +57,7 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo = {} as Todo, onSubmit, onClos
         value={formValues.dueDate}
         onChange={handleChange}
         InputLabelProps={{ shrink: true }}
+        required
       />
       <Box display="flex" justifyContent="flex-end" gap={1}>
         <Button onClick={onClose} color="secondary">
