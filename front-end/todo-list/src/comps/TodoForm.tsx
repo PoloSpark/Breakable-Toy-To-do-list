@@ -14,8 +14,9 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo = {} as Task, onSubmit, onClos
     text: todo.text || '',
     priority: todo.priority || 'LOW',
     done: todo.done || false,
+    doneDate: todo.doneDate || '',
     dueDate: todo.dueDate || '',
-    createdAt: todo.createdAt || '',
+    creationDate: todo.creationDate || '',
   });
 
   const handleChange = (e: React.ChangeEvent<{ name?: string; value: unknown }> | SelectChangeEvent<string>) => {

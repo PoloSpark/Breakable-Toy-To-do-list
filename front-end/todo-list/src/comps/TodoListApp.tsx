@@ -20,6 +20,7 @@ import {
     Chip,
     Checkbox,
     TableSortLabel,
+    TablePagination,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import axios from 'axios';
@@ -34,7 +35,8 @@ export interface Task {
     priority: 'LOW' | 'MEDIUM' | 'HIGH';
     done: boolean;
     dueDate: string;
-    createdAt: string;
+    creationDate: string;
+    doneDate?: string; // Optional field for the date when the task was completed
 }
 
 export interface Filter {
@@ -43,16 +45,15 @@ export interface Filter {
     status?: string;
 }
 
-export interface ITodo{
+export interface ITodo {
     id: number;
-    text: string; 
-    priority: "HIGH" | "MEDIUM" | "LOW"; 
+    text: string;
+    priority: "HIGH" | "MEDIUM" | "LOW";
     done: boolean;
     dueDate: string;
-  }
+}
 
 export const API_URL = 'http://localhost:9090/todos';
-
 
 const TaskDashboard = () => {
     // Sample data
@@ -71,6 +72,10 @@ const TaskDashboard = () => {
     const [order, setOrder] = useState<'asc' | 'desc'>('asc');
     const [orderBy, setOrderBy] = useState<keyof Task>('text');
 
+    // Pagination states
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+
     // Filtered and sorted tasks
     const filteredTasks = tasks.filter(task => {
         const matchesName = task.text.toLowerCase().includes(nameSearch.toLowerCase());
@@ -79,16 +84,19 @@ const TaskDashboard = () => {
             (statusFilter === 'done' ? task.done : !task.done);
         return matchesName && matchesPriority && matchesStatus;
     }).sort((a, b) => {
-        if (orderBy === 'dueDate' || orderBy === 'createdAt') {
+        if (orderBy === 'dueDate' || orderBy === 'creationDate') {
             const dateA = new Date(a[orderBy]).getTime();
             const dateB = new Date(b[orderBy]).getTime();
             return order === 'asc' ? dateA - dateB : dateB - dateA;
         } else {
             return order === 'asc'
-                ? a[orderBy] < b[orderBy] ? -1 : 1
-                : a[orderBy] > b[orderBy] ? -1 : 1;
+                ? a[orderBy] && b[orderBy] && a[orderBy] < b[orderBy] ? -1 : 1
+                : a[orderBy] && b[orderBy] && a[orderBy] > b[orderBy] ? -1 : 1;
         }
     });
+
+    // Paginated tasks
+    const paginatedTasks = filteredTasks.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     const fetchTasks = async () => {
         try {
@@ -101,7 +109,8 @@ const TaskDashboard = () => {
                 priority: item.priority,
                 done: item.done,
                 dueDate: item.dueDate,
-                createdAt: item.createdAt,
+                creationDate: item.creationDate,
+                doneDate: item.doneDate, // Assuming the API returns this field
             }));
 
             setTasks(mappedTasks);
@@ -117,11 +126,19 @@ const TaskDashboard = () => {
 
     // Calculate averages
     const calculateAverages = () => {
-        const now = new Date();
-        const avgTime = tasks.reduce((acc, task) => {
-            const created = new Date(task.createdAt);
-            return acc + (now.getTime() - created.getTime());
-        }, 0) / tasks.length;
+        const completedTasks = tasks.filter(task => task.done && task.doneDate);
+
+        const avgTime = completedTasks.length > 0 ? completedTasks.reduce((acc, task) => {
+            const created = new Date(task.creationDate);
+            const done = task.doneDate ? new Date(task.doneDate) : null;
+        
+            if (done && !isNaN(created.getTime()) && !isNaN(done.getTime())) {
+                const timeDifference = done.getTime() - created.getTime();
+                return acc + timeDifference;
+            } else {
+                return acc;
+            }
+        }, 0) / completedTasks.length : NaN;
 
         const avgByPriority: { [key: string]: number } = {
             LOW: 0,
@@ -130,12 +147,15 @@ const TaskDashboard = () => {
         };
 
         ['LOW', 'MEDIUM', 'HIGH'].forEach(priority => {
-            const priorityTasks = tasks.filter(t => t.priority === priority);
-            if (priorityTasks.length) {
+            const priorityTasks = completedTasks.filter(t => t.priority === priority);
+            if (priorityTasks.length > 0) {
                 avgByPriority[priority] = priorityTasks.reduce((acc, task) => {
-                    const created = new Date(task.createdAt);
-                    return acc + (now.getTime() - created.getTime());
+                    const created = new Date(task.creationDate);
+                    const done = new Date(task.doneDate!);
+                    return acc + (done.getTime() - created.getTime());
                 }, 0) / priorityTasks.length;
+            } else {
+                avgByPriority[priority] = NaN; // Set to NaN if there are no tasks for this priority
             }
         });
 
@@ -160,7 +180,7 @@ const TaskDashboard = () => {
                 .then(() => {
                     setTasks(prevTodos =>
                         prevTodos.map(todo =>
-                            todo.id === id ? { ...todo, done: !currentStatus } : todo
+                            todo.id === id ? { ...todo, done: !currentStatus, doneDate: undefined } : todo
                         )
                     );
                 })
@@ -170,7 +190,7 @@ const TaskDashboard = () => {
                 .then(() => {
                     setTasks(prevTodos =>
                         prevTodos.map(todo =>
-                            todo.id === id ? { ...todo, done: !currentStatus } : todo
+                            todo.id === id ? { ...todo, done: !currentStatus, doneDate: new Date().toISOString() } : todo
                         )
                     );
                 })
@@ -201,6 +221,15 @@ const TaskDashboard = () => {
         const isAsc = orderBy === property && order === 'asc';
         setOrder(isAsc ? 'desc' : 'asc');
         setOrderBy(property);
+    };
+
+    const handleChangePage = (_event: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
     };
 
     return (
@@ -288,7 +317,7 @@ const TaskDashboard = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {filteredTasks.map((task) => (
+                            {paginatedTasks.map((task) => (
                                 <TableRow key={task.id}>
                                     <TableCell>
                                         <Checkbox
@@ -310,13 +339,22 @@ const TaskDashboard = () => {
                                             <EditIcon />
                                         </IconButton>
                                         <IconButton size="small" color="error" onClick={() => handleDelete(task.id)} >
-                                            <DeleteIcon/>
+                                            <DeleteIcon />
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
+                    <TablePagination
+                        rowsPerPageOptions={[10, 25, 50]}
+                        component="div"
+                        count={filteredTasks.length}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
                 </TableContainer>
             </div>
 
@@ -329,7 +367,7 @@ const TaskDashboard = () => {
                                 Average Time of Tasks
                             </Typography>
                             <Typography>
-                                {Math.round(avgTime / (1000 * 60 * 60 * 24))} days
+                                {isNaN(avgTime) ? 'N/A' : `${Math.round(avgTime / (1000 * 60 * 60 * 24))} days`}
                             </Typography>
                         </div>
                         <div>
@@ -337,13 +375,13 @@ const TaskDashboard = () => {
                                 Average Time by Priority
                             </Typography>
                             <Typography>
-                                High: {Math.round(avgByPriority.HIGH / (1000 * 60 * 60 * 24))} days
+                                Low: {isNaN(avgByPriority.LOW) ? 'N/A' : Math.round(avgByPriority.LOW / (1000 * 60 * 60 * 24))} days
                             </Typography>
                             <Typography>
-                                Medium: {Math.round(avgByPriority.MEDIUM / (1000 * 60 * 60 * 24))} days
+                                Medium: {isNaN(avgByPriority.MEDIUM) ? 'N/A' : Math.round(avgByPriority.MEDIUM / (1000 * 60 * 60 * 24))} days
                             </Typography>
                             <Typography>
-                                Low: {Math.round(avgByPriority.LOW / (1000 * 60 * 60 * 24))} days
+                                High: {isNaN(avgByPriority.HIGH) ? 'N/A' : Math.round(avgByPriority.HIGH / (1000 * 60 * 60 * 24))} days
                             </Typography>
                         </div>
                     </div>
